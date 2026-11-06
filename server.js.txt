@@ -1,23 +1,23 @@
-// server.js - Kiana AI Proxy Backend
-const express = require('express');
-const app = express();
-app.use(express.json());
+export default async function handler(req, res) {
+  // فقط درخواست‌های POST رو قبول کن
+  if (req.method !== 'POST') {
+    return res.status(200).send('Kiana AI Proxy is running on Vercel ✅');
+  }
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const MODEL = process.env.AI_MODEL || "google/gemini-2.0-flash-exp:free";
-
-app.post('/chat', async (req, res) => {
   try {
     const { message, history } = req.body;
     
-    if (!message || typeof message !== 'string') {
+    if (!message) {
       return res.status(400).json({ error: "message is required" });
     }
     
+    const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+    const MODEL = process.env.AI_MODEL || "google/gemini-2.0-flash-exp:free";
+
     const messages = [
       {
         role: "system",
-        content: "شما دستیار هوشمند اپلیکیشن مدیریت پروژه «کیانا» هستید. به زبان فارسی روان و محاوره‌ای پاسخ دهید. پاسخ‌ها کوتاه و کاربردی باشند."
+        content: "شما دستیار هوشمند اپلیکیشن مدیریت پروژه «کیانا» هستید. به زبان فارسی روان پاسخ دهید."
       },
       ...(history || []),
       { role: "user", content: message }
@@ -42,24 +42,11 @@ app.post('/chat', async (req, res) => {
     const data = await response.json();
     
     if (!response.ok) {
-      console.error("OpenRouter error:", data);
-      return res.status(response.status).json({ 
-        error: data.error?.message || "AI service error" 
-      });
+      return res.status(response.status).json({ error: data.error?.message || "AI error" });
     }
 
-    const reply = data.choices?.[0]?.message?.content || "پاسخی دریافت نشد.";
-    res.json({ reply });
+    return res.status(200).json({ reply: data.choices?.[0]?.message?.content });
   } catch (e) {
-    console.error("Server error:", e);
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
-});
-
-// مسیر تست سلامت سرور
-app.get('/', (req, res) => {
-  res.send('Kiana AI Proxy is running ✅');
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server on port ${PORT}`));
+}
